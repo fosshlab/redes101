@@ -1,0 +1,9 @@
+REDES101 labs
+Copyright (c) 2026, IPTA / FOSSHLab
+
+These labs use the Mininet project as a dependency. Mininet is a separate
+project under the BSD 3-Clause License. Its LICENSE credits:
+Copyright (c) 2013-2022 Open Networking Foundation
+Copyright (c) 2009-2012 Bob Lantz and The Board of Trustees of The Leland
+Stanford Junior University
+https://github.com/mininet/mininet/blob/master/LICENSE

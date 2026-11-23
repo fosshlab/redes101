@@ -63,4 +63,5 @@ fallas y restauración) y termina con
 ## Licencia
 
 Código y guías bajo [BSD-3-Clause](LICENSE). Mininet es un proyecto aparte, con
-su [propia licencia](https://github.com/mininet/mininet/blob/master/LICENSE).
+su [propia licencia](https://github.com/mininet/mininet/blob/master/LICENSE);
+el crédito correspondiente está en [NOTICE](NOTICE).
