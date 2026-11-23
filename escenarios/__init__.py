@@ -1,0 +1,1 @@
+"""Escenarios educativos de Minired."""

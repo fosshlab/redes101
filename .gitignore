@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.pcap
+*.pcapng
+*.log
+.DS_Store
