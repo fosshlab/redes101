@@ -17,7 +17,8 @@ así que las tramas que capturás con `tcpdump` o Wireshark son paquetes de verd
 
 ## Requisitos
 
-- Ubuntu 24.04 (la VM del curso ya trae todo).
+- Hipervisor open source recomendado: [QEMU/KVM](https://www.qemu.org/) + `libvirt` ([virt-manager](https://virt-manager.org/) o [GNOME Boxes](https://apps.gnome.org/Boxes/)) en Linux; [UTM](https://mac.getutm.app/) o [Canonical Multipass](https://canonical.com/multipass) en macOS; Multipass o, como alternativa multiplataforma, [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (no hace falta el *Extension Pack* privativo).
+- Ubuntu 24.04 dentro de la VM (la imagen del curso ya trae todo).
 - El [fork de Mininet del curso](https://github.com/mendezgarabetti/mininet), con Open vSwitch.
 - `iproute2`, `ping`, `tcpdump`, `tshark`, `iperf`, `traceroute` y, para mirar las capturas, Wireshark.
 
