@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Comprueba con root que los dos laboratorios de REDES101 funcionan en esta VM.
+# Comprueba con root que los cuatro laboratorios de REDES101 funcionan en esta VM.
 # Uso: sudo bash validar.sh   (los PCAP quedan en MINIRED_PCAP_DIR o en /tmp)
 set -euo pipefail
 
@@ -8,7 +8,7 @@ if [ "$(id -u)" -ne 0 ]; then
     echo "Ejecutar con root dentro de la VM: sudo bash validar.sh" >&2
     exit 1
 fi
-for programa in ovs-vsctl ovs-appctl ip ping tcpdump tshark; do
+for programa in ovs-vsctl ovs-appctl ip ping tcpdump tshark iperf traceroute; do
     if ! command -v "$programa" >/dev/null 2>&1; then
         echo "Falta $programa en la VM" >&2
         exit 1
@@ -20,11 +20,14 @@ mkdir -p "$MINIRED_PCAP_DIR"
 python3 - <<'PY'
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
-from escenarios.lan_basica import crear_escenario as lan
 from escenarios.dos_redes import crear_escenario as router
+from escenarios.lan_basica import crear_escenario as lan
+from escenarios.red_rota import crear_escenario as broken
+from escenarios.rendimiento_tcp import crear_escenario as perf
 
 pcaps = Path(os.environ["MINIRED_PCAP_DIR"])
 
@@ -37,7 +40,7 @@ def verificar(condicion, mensaje):
 
 def nodo(n, *orden):
     proceso = n.popen(list(orden), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    salida, error = proceso.communicate(timeout=15)
+    salida, error = proceso.communicate(timeout=20)
     return proceso.returncode, salida.decode(errors="replace"), error.decode(errors="replace")
 
 
@@ -162,5 +165,42 @@ try:
 finally:
     esc.stop()
 
-print("OK: ambos laboratorios funcionan en esta VM. PCAP en", pcaps)
+esc = perf(bw=10, delay="10ms")
+try:
+    red = esc.start()
+    verificar(len(red.links) == 3, "lab 3: tres enlaces TCLink en serie")
+    h1, h2 = red.get("h1"), red.get("h2")
+    direccion(h1, "h1-eth0", "192.168.10.10", "02:00:00:00:0a:01")
+    direccion(h2, "h2-eth0", "192.168.10.20", "02:00:00:00:0a:02")
+    rc, ping_out, _ = nodo(h1, "ping", "-c", "4", "-W", "2", "192.168.10.20")
+    verificar(rc == 0, "lab 3: h1 llega a h2 sobre enlaces tc")
+    rtts = [float(m.group(1)) for m in re.finditer(r"icmp_seq=(?:[234]) .*?time=([0-9.]+)", ping_out)]
+    verificar(len(rtts) == 3 and all(55.0 <= t <= 85.0 for t in rtts),
+              f"lab 3: RTT estable en [55, 85] ms para 3x10ms ida+vuelta ({rtts})")
+    archivos = captura(esc, "perf", 6)
+    srv = h2.popen(["iperf", "-s"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        rc_c, out_c, _ = nodo(h1, "iperf", "-c", "192.168.10.20", "-t", "2")
+        verificar(rc_c == 0 and "Mbits/sec" in out_c, "lab 3: iperf TCP completo sobre enlaces de 10 Mb/s")
+    finally:
+        srv.terminate()
+        srv.wait(timeout=5)
+    cerrar_captura(esc, archivos, "perf")
+    verificar(bool(tramas(pcaps / "perf/01_h1-eth0.pcap", "tcp.flags.syn == 1")),
+              "lab 3: PCAP de h1 captura handshake SYN/SYN-ACK TCP")
+finally:
+    esc.stop()
+
+esc = broken()
+try:
+    red = esc.start()
+    verificar(len(red.links) == 4, "lab 4: cuatro enlaces iniciados en red_rota")
+    pc1, pc2 = red.get("pc1"), red.get("pc2")
+    direccion(pc1, "pc1-eth0", "192.168.10.10", "02:00:00:00:0a:0a")
+    direccion(pc2, "pc2-eth0", "192.168.20.10", "02:00:00:00:14:0a")
+    verificar(not responde(pc1, "192.168.20.10"), "lab 4: red_rota inicia aislada entre subredes como se diseñó")
+finally:
+    esc.stop()
+
+print("OK: los cuatro laboratorios funcionan en esta VM. PCAP en", pcaps)
 PY

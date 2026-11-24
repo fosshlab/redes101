@@ -14,10 +14,12 @@ from mininet.node import OVSBridge
 class Escenario:
     """Una sesión Mininet con reinicio completo y capturas por cada puerto."""
 
-    def __init__(self, nombre, construir, dos_redes=False):
+    def __init__(self, nombre, construir, dos_redes=False, link=None, permite_fallas=True):
         self.nombre = nombre
         self.construir = construir
         self.dos_redes = dos_redes
+        self.link = link
+        self.permite_fallas = permite_fallas
         self.net = None
         self.capturas = []
         self.falla_activa = None
@@ -26,7 +28,10 @@ class Escenario:
         if self.net is not None:
             return self.net
         # Bridges OVS sin controlador: aprenden MAC como un switch común.
-        net = Mininet(controller=None, switch=OVSBridge, build=False)
+        kwargs = {"controller": None, "switch": OVSBridge, "build": False}
+        if self.link is not None:
+            kwargs["link"] = self.link
+        net = Mininet(**kwargs)
         try:
             self.construir(net)
             net.build()
@@ -53,6 +58,8 @@ class Escenario:
     def falla(self, nombre):
         if self.net is None:
             raise RuntimeError("Primero iniciá el escenario")
+        if not self.permite_fallas:
+            raise ValueError("Este escenario no usa el comando falla; inspeccioná y modificá la red con ip/tc/sysctl")
         if self.falla_activa:
             raise RuntimeError("Restaurá o reiniciá antes de aplicar otra falla")
         pc2 = self.net.get("pc2")
